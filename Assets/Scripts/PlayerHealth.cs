@@ -1,25 +1,26 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.UI;
 
 public class PlayerHealth : MonoBehaviour
 {
     [Header("Sistema de Vida")]
-    public int vidasMaximas = 3;           // Vidas máximas
-    private int vidasActuales;             // Vidas actuales
+    public int vidasMaximas = 3;
+    private int vidasActuales;
     
     [Header("Daño")]
-    public float tiempoInvulnerable = 1f;  // Tiempo invulnerable después de recibir daño
-    private bool esInvulnerable = false;   // ¿Está invulnerable ahora?
-     
+    public float tiempoInvulnerable = 1f;
+    private bool esInvulnerable = false;
+    
     [Header("Respawn")]
-    public Transform puntoRespawn;         // Dónde reaparece al morir
+    public Transform puntoRespawn;
+    
+    [Header("UI - Corazones")]
+    public GameObject[] corazones; // Array de imágenes de corazones
     
     [Header("Referencias")]
     private SpriteRenderer spriteRenderer;
     private Rigidbody2D rb;
-    
-    [Header("UI")]
-    public UnityEngine.UI.Text textoVidas;  // Referencia al texto de vidas
     
     
     void Start()
@@ -28,28 +29,23 @@ public class PlayerHealth : MonoBehaviour
         spriteRenderer = GetComponent<SpriteRenderer>();
         rb = GetComponent<Rigidbody2D>();
         
-        // Actualizar UI al inicio
         ActualizarUI();
-        
         Debug.Log("Vidas iniciales: " + vidasActuales);
     }
     
     
-    // Función para recibir daño
     public void RecibirDaño(int cantidad)
     {
-        // Solo recibe daño si NO es invulnerable
         if (!esInvulnerable)
         {
             vidasActuales -= cantidad;
             
-            ActualizarUI();
-            Debug.Log("¡Auch! Vidas restantes: " + vidasActuales);
+            Debug.Log("DAÑO RECIBIDO - Vidas actuales: " + vidasActuales); // DEBUG
             
-            // Activar invulnerabilidad temporal
+            ActualizarUI(); // Actualizar UI INMEDIATAMENTE
+            
             StartCoroutine(Invulnerabilidad());
             
-            // Verificar si murió
             if (vidasActuales <= 0)
             {
                 Morir();
@@ -58,19 +54,14 @@ public class PlayerHealth : MonoBehaviour
     }
     
     
-    // Corrutina de invulnerabilidad (parpadeo)
     System.Collections.IEnumerator Invulnerabilidad()
     {
         esInvulnerable = true;
         
-        // Parpadear 5 veces
         for (int i = 0; i < 5; i++)
         {
-            // Hacer invisible
             spriteRenderer.color = new Color(1f, 1f, 1f, 0.3f);
             yield return new WaitForSeconds(0.1f);
-            
-            // Hacer visible
             spriteRenderer.color = new Color(1f, 1f, 1f, 1f);
             yield return new WaitForSeconds(0.1f);
         }
@@ -80,66 +71,75 @@ public class PlayerHealth : MonoBehaviour
     }
     
     
-    // Función cuando muere
     void Morir()
     {
         Debug.Log("¡Has muerto! Reiniciando nivel...");
-        
-        // Opción 1: Reiniciar la escena completa
         SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
-        
-        // Opción 2: Respawn en punto específico (comentado por ahora)
-        // Respawn();
     }
     
     
-    // Función para respawn (reaparición)
     void Respawn()
     {
-        // Restaurar vidas
         vidasActuales = vidasMaximas;
         
-        ActualizarUI();
-        
-        // Mover al punto de respawn
         if (puntoRespawn != null)
         {
             transform.position = puntoRespawn.position;
         }
         else
         {
-            // Si no hay punto, volver al origen
             transform.position = new Vector3(-3, 0, 0);
         }
         
-        // Resetear velocidad
         rb.linearVelocity = Vector2.zero;
+        ActualizarUI();
         
         Debug.Log("Respawn completado. Vidas restauradas: " + vidasActuales);
     }
     
     
-    // Detectar colisión con obstáculos
+    // FUNCIÓN ACTUALIZAR UI - VERSIÓN CON CORAZONES
+    void ActualizarUI()
+    {
+        Debug.Log("Actualizando UI - Vidas: " + vidasActuales); // DEBUG
+        
+        if (corazones != null && corazones.Length > 0)
+        {
+            for (int i = 0; i < corazones.Length; i++)
+            {
+                if (corazones[i] != null)
+                {
+                    if (i < vidasActuales)
+                    {
+                        corazones[i].SetActive(true); // Mostrar corazón
+                    }
+                    else
+                    {
+                        corazones[i].SetActive(false); // Ocultar corazón
+                    }
+                    
+                    Debug.Log("Corazón " + i + " estado: " + corazones[i].activeSelf); // DEBUG
+                }
+            }
+        }
+        else
+        {
+            Debug.LogWarning("Array de corazones está vacío o es null!");
+        }
+    }
+    
+    
     void OnTriggerEnter2D(Collider2D other)
     {
-        // Si toca un obstáculo
         if (other.CompareTag("Obstaculo"))
         {
+            Debug.Log("Colisión con obstáculo detectada"); // DEBUG
             RecibirDaño(1);
         }
         
-        // Si cae al vacío
         if (other.CompareTag("KillZone"))
         {
             Morir();
-        }
-    }
-    // Actualizar la UI de vidas
-    void ActualizarUI()
-    {
-        if (textoVidas != null)
-        {
-            textoVidas.text = "Vidas: " + vidasActuales;
         }
     }
 }
